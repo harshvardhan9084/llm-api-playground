@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM API Playground: test OpenAI-compatible endpoints in your browser</title>
+<meta name="description" content="Free browser-based LLM API playground. Test Inception Mercury, Google Gemini, OpenRouter, Together AI, OpenAI or any OpenAI-compatible endpoint with auto-detection, live model availability checks, streaming, tool calling and latency metrics. No backend: your keys stay in your browser.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://harshvardhan9084.github.io/llm-api-playground/">
+<meta property="og:url" content="https://harshvardhan9084.github.io/llm-api-playground/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="LLM API Playground">
+<meta property="og:description" content="Test any OpenAI-compatible LLM API from your browser. Auto-detects providers, checks which models your key can use, streams responses and measures latency.">
+<meta name="twitter:card" content="summary">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src https: http://localhost:* http://127.0.0.1:*; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f6b5c'/%3E%3Cpath d='M8 22l5-12 3 7 2-4 5 9' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"LLM API Playground","applicationCategory":"DeveloperApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Browser-based playground for testing OpenAI-compatible LLM APIs with auto-detection, model availability checks, streaming, tool calling and latency metrics."}</script>
+<style>
+:root{--bg:#f6f7f4;--panel:#fff;--ink:#1b1f1d;--mute:#667069;--line:#d9ddd6;--acc:#0f6b5c;--accink:#fff;--err:#b3261e;--ok:#1b7f3b;--warn:#a15c00;--code:#eef1ec}
+@media (prefers-color-scheme:dark){:root{--bg:#121513;--panel:#1b1f1c;--ink:#e6eae6;--mute:#8f9a92;--line:#2f362f;--accink:#08100d;--err:#ff8a80;--ok:#6fdc8c;--warn:#ffc266;--code:#232823}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:10px 18px;border-bottom:3px solid var(--acc);background:var(--panel)}
+header h1{font-size:16px;margin:0}
+#provs{display:flex;gap:6px;flex-wrap:wrap}
+#provs button{position:relative;padding:6px 12px}
+#provs button.on{background:var(--acc);color:var(--accink);border-color:var(--acc);font-weight:600}
+.dot{display:none;width:7px;height:7px;border-radius:50%;background:var(--ok);position:absolute;top:3px;right:3px}
+.dot.s{display:block}
+#provs button.on .dot{box-shadow:0 0 0 1.5px var(--accink)}
+main{display:grid;grid-template-columns:350px 1fr;gap:14px;padding:14px;max-width:1500px;margin:auto}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:12px}
+.card h2{font-size:13px;margin:0 0 8px}
+label{display:block;font-size:12px;color:var(--mute);margin:8px 0 3px}
+input,select,textarea,button{font:inherit;color:inherit}
+input[type=text],input[type=password],input[type=number],select,textarea{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+textarea{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chk{display:flex;gap:6px;align-items:center;margin:5px 0;font-size:13px}
+.chk input{margin:0}.chk label{margin:0;color:var(--ink);font-size:13px}
+button{padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);cursor:pointer}
+button.p{background:var(--acc);color:var(--accink);border-color:var(--acc);font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+#chat{min-height:160px;max-height:46vh;overflow:auto}
+.m{padding:8px 10px;border-radius:6px;margin-bottom:8px;white-space:pre-wrap;word-break:break-word;border:1px solid var(--line)}
+.m b{display:block;font-size:11px;color:var(--mute);margin-bottom:2px;font-weight:600}
+.m.assistant{background:var(--code)}
+.tabs{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.tabs button.on{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+pre{margin:0;padding:10px;background:var(--code);border-radius:6px;overflow:auto;max-height:340px;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-all}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.kv div{border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.kv small{display:block;color:var(--mute);font-size:11px}
+.kv strong{font-size:15px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.w{white-space:normal;word-break:break-word;min-width:160px}
+.err{color:var(--err)}.okc{color:var(--ok)}.wr{color:var(--warn)}
+.note{color:var(--mute);font-size:12px}
+a{color:var(--acc)}
+#status{font-size:12px;color:var(--mute)}
+.hide{display:none!important}
+.noscroll{overflow:hidden}
+#chat{font-size:var(--cfs,14px)}
+.m .md{white-space:normal}
+.md p{margin:.45em 0}.md h3{font-size:1em;margin:.7em 0 .3em}.md ul,.md ol{margin:.35em 0;padding-left:1.4em}
+.md code{background:var(--code);padding:1px 4px;border-radius:4px;font:.9em ui-monospace,Menlo,Consolas,monospace}
+.md pre{margin:.5em 0;max-height:none}.md pre code{padding:0;background:none}
+.fs{position:fixed!important;inset:0;z-index:50;margin:0!important;border-radius:0!important;display:flex;flex-direction:column;overflow:auto;padding:14px 18px!important}
+.fs #chat{flex:1;max-height:none!important;width:100%;max-width:940px;margin:8px auto 0;line-height:1.6}
+.fs #user,.fs #fsmeta,.fs .cbar{width:100%;max-width:940px;margin-left:auto;margin-right:auto}
+.fs .nofs{display:none!important}
+#detLog{margin-top:8px;max-height:220px}
+summary{cursor:pointer;font-size:12px;color:var(--mute);margin-top:8px}
+</style>
+</head>
+<body data-p="inception">
+<header>
+  <h1>LLM API playground</h1>
+  <div id="provs" role="tablist" aria-label="Provider"></div>
+  <span class="note" id="hostnote"></span>
+  <button id="forgetAll" style="margin-left:auto">Forget all saved keys</button>
+</header>
+<main>
+<aside>
+  <div class="card">
+    <h2>Connection</h2>
+    <label for="key">API key</label>
+    <input type="password" id="key" autocomplete="off" placeholder="Paste your API key">
+    <div class="bar" style="margin-top:6px"><button id="saveKey" class="p">Save key</button><button id="forgetKey">Forget key</button><span id="kstat" class="note"></span></div>
+    <div class="note" id="keyhint" style="margin-top:6px"></div>
+    <label for="smode">Key storage</label>
+    <select id="smode"><option value="persistent">Remember on this device</option><option value="session">This tab only (forgotten on close)</option><option value="encrypted">Remember, encrypted with a passphrase</option></select>
+    <div class="bar"><button id="unlock" class="hide">Unlock saved keys</button></div>
+    <label for="base">Base URL</label>
+    <input type="text" id="base">
+    <div data-only="openrouter"><div class="row"><div><label for="hreferer">HTTP-Referer (optional)</label><input type="text" id="hreferer" placeholder="https://yoursite.com"></div><div><label for="htitle">X-Title (optional)</label><input type="text" id="htitle" placeholder="My playground"></div></div></div>
+    <div class="note" style="margin-top:8px">Keys are stored unencrypted in this browser’s localStorage. Use this only on your own device.</div>
+  </div>
+
+  <div class="card" data-only="custom">
+    <h2>Smart setup</h2>
+    <label for="smart">Paste anything: a base URL, a full endpoint URL, or a cURL command from the provider’s docs</label>
+    <textarea id="smart" rows="3" placeholder="https://api.groq.com/openai/v1&#10;or: curl https://api.example.com/v1/chat/completions -H &quot;Authorization: Bearer …&quot; …"></textarea>
+    <label for="preset">Or pick a known endpoint</label>
+    <select id="preset"></select>
+    <div class="bar"><button id="detect" class="p">Detect and configure</button><span id="dstat" class="note"></span></div>
+    <pre id="detLog" class="hide"></pre>
+    <details><summary>Advanced (filled in automatically)</summary>
+      <div class="row"><div><label for="auth">Auth style</label><select id="auth"><option value="bearer">Authorization: Bearer</option><option value="header">Custom header</option><option value="query">Query parameter</option><option value="none">None (local server)</option></select></div>
+      <div><label for="authname">Header / param name</label><input type="text" id="authname" placeholder="x-api-key"></div></div>
+      <div class="row"><div><label for="tokp">Token limit field</label><select id="tokp"><option>max_tokens</option><option>max_completion_tokens</option></select></div>
+      <div><label for="mpath">Models path</label><input type="text" id="mpath" placeholder="/models"></div></div>
+      <label for="cname">Display name</label><input type="text" id="cname" placeholder="Custom">
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>Model</h2>
+    <label for="model">Model id (type, or pick below)</label>
+    <input type="text" id="model" list="msug">
+    <datalist id="msug"></datalist>
+    <div class="bar"><button id="fetchModels" class="p">Fetch models for this key</button><span id="mstat" class="note"></span></div>
+    <label for="mfilter">Filter</label>
+    <input type="text" id="mfilter" placeholder="e.g. gemini, free, llama">
+    <div class="chk"><input type="checkbox" id="chatOnly" checked><label for="chatOnly">Chat-capable models only</label></div>
+    <div class="chk"><input type="checkbox" id="hideFail"><label for="hideFail">Hide models that failed the probe</label></div>
+    <label for="msel">Models (✓ works · ⚠ limited or billing · ✗ unavailable · ? error · · untested)</label>
+    <select id="msel"><option value="">Fetch models first</option></select>
+    <div class="row">
+      <div><label for="pcap">Probe up to</label><input type="number" id="pcap" value="20" min="1" max="500"></div>
+      <div><label for="pconc">Parallel</label><select id="pconc"><option>1</option><option selected>3</option><option>5</option></select></div>
+    </div>
+    <div class="bar"><button id="probe">Probe shown models</button><button id="pstop" disabled>Stop</button></div>
+    <div class="note" id="pstat" style="margin-top:6px">Each probe sends a real 16-token request, which counts against your quota or billing.</div>
+  </div>
+
+  <div class="card">
+    <h2>Sampling and limits</h2>
+    <div class="row">
+      <div><label for="temp">temperature</label><input type="number" id="temp" step="0.05"></div>
+      <div><label for="maxc" id="toklab">max tokens</label><input type="number" id="maxc" min="1" placeholder="model default"></div>
+    </div>
+    <div class="row">
+      <div data-only="openai google openrouter together custom"><label for="topp">top_p</label><input type="number" id="topp" step="0.05" min="0" max="1"></div>
+      <div data-only="openai google openrouter together custom"><label for="seed">seed</label><input type="number" id="seed" step="1"></div>
+      <div data-only="openai google openrouter together custom"><label for="fpen">frequency_penalty</label><input type="number" id="fpen" step="0.1"></div>
+      <div data-only="openai google openrouter together custom"><label for="ppen">presence_penalty</label><input type="number" id="ppen" step="0.1"></div>
+      <div data-only="openrouter together custom"><label for="topk">top_k</label><input type="number" id="topk" step="1"></div>
+      <div data-only="openrouter together custom"><label for="minp">min_p</label><input type="number" id="minp" step="0.01"></div>
+      <div data-only="openrouter together custom"><label for="rep">repetition_penalty</label><input type="number" id="rep" step="0.05"></div>
+    </div>
+    <label for="effort" id="efflab">reasoning_effort</label>
+    <select id="effort"></select>
+    <label for="stop">stop sequences (one per line)</label>
+    <textarea id="stop" rows="2"></textarea>
+  </div>
+
+  <div class="card">
+    <h2>Streaming and extras</h2>
+    <div class="chk"><input type="checkbox" id="stream" checked><label for="stream">stream</label></div>
+    <div class="chk"><input type="checkbox" id="usage" checked><label for="usage">stream_options.include_usage</label></div>
+    <div class="chk" data-only="inception"><input type="checkbox" id="diffusing"><label for="diffusing">diffusing (diffusion effect in stream)</label></div>
+    <div class="chk" data-only="inception"><input type="checkbox" id="realtime"><label for="realtime">realtime (lower TTFT)</label></div>
+    <div class="chk" data-only="inception"><input type="checkbox" id="rsum"><label for="rsum">reasoning_summary</label></div>
+    <div class="chk" data-only="inception"><input type="checkbox" id="rwait"><label for="rwait">reasoning_summary_wait</label></div>
+    <label for="extra">extra_body (JSON object merged into the request)</label>
+    <textarea id="extra" rows="2" placeholder="{}"></textarea>
+  </div>
+
+  <div class="card">
+    <h2>Structured output</h2>
+    <label for="rf">response_format</label>
+    <select id="rf"><option value="">(omit)</option><option>text</option><option>json_object</option><option>json_schema</option></select>
+    <div id="schemaBox" class="hide">
+      <label for="schema">json_schema object (name, schema, strict)</label>
+      <textarea id="schema" rows="8">{
+  "name": "answer",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "city": {"type": "string"},
+      "population": {"type": "integer"}
+    },
+    "required": ["city", "population"],
+    "additionalProperties": false
+  }
+}</textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Tool calling</h2>
+    <label for="tools">tools (JSON array)</label>
+    <textarea id="tools" rows="8">[
+  {"type": "function", "function": {
+    "name": "get_weather",
+    "description": "Get current weather for a city",
+    "parameters": {"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}
+  }}
+]</textarea>
+    <div class="chk"><input type="checkbox" id="useTools"><label for="useTools">send tools</label></div>
+    <label for="tc">tool_choice</label>
+    <select id="tc"><option value="">(omit)</option><option>auto</option><option>required</option><option>none</option></select>
+    <label for="tcname">or force a function by name</label>
+    <input type="text" id="tcname" placeholder="get_weather">
+  </div>
+</aside>
+
+<section>
+  <div class="card" id="convo">
+    <div class="bar" style="margin:0 0 6px"><h2 style="margin:0;flex:1">Conversation <span id="fsname" class="note"></span></h2>
+      <span class="chk"><input type="checkbox" id="mdon" checked><label for="mdon">Markdown</label></span>
+      <button id="fsm" title="Smaller text" aria-label="Smaller text">A−</button><button id="fsp" title="Larger text" aria-label="Larger text">A+</button>
+      <button id="fsBtn">Full screen</button></div>
+    <label for="sys">System prompt</label>
+    <textarea id="sys" rows="2" placeholder="Optional"></textarea>
+    <div id="chat" style="margin-top:10px"></div>
+    <div id="fsmeta" class="note" style="margin-top:6px"></div>
+    <label for="user">Message</label>
+    <textarea id="user" rows="3" placeholder="Type a message. Ctrl/Cmd+Enter to send. The chat carries over when you switch provider, so you can compare answers."></textarea>
+    <div class="bar">
+      <button class="p" id="send">Send</button>
+      <button id="stop-btn" disabled>Stop</button>
+      <button id="clear">Clear chat</button>
+      <span class="nofs bar" style="margin:0"><span class="note">Benchmark</span>
+      <input type="number" id="n" value="5" min="1" max="50" style="width:64px" aria-label="Number of runs">
+      <button id="bench">Run N× (no history)</button></span>
+      <span id="status"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tabs" id="tabs">
+      <button data-t="metrics" class="on">Metrics</button>
+      <button data-t="req">Request</button>
+      <button data-t="res">Raw response</button>
+      <button data-t="runs">Runs</button>
+      <button data-t="avail">Availability</button>
+      <button data-t="fim" data-only="inception">Fill-in-the-middle</button>
+      <button data-t="models">Models JSON</button>
+    </div>
+    <div id="t-metrics">
+      <div class="kv" id="kv"></div>
+      <div id="warn" class="note" style="margin-top:8px"></div>
+      <div id="rs" class="note" style="margin-top:8px;white-space:pre-wrap"></div>
+    </div>
+    <div id="t-req" class="hide">
+      <div class="bar" style="margin:0 0 8px"><button id="cCurl">Copy cURL</button><button id="cPy">Copy Python</button><button id="cJs">Copy fetch (JS)</button></div>
+      <pre id="reqPre">Send a message to see the request.</pre>
+    </div>
+    <div id="t-res" class="hide"><pre id="resPre">Nothing yet.</pre></div>
+    <div id="t-runs" class="hide">
+      <div style="overflow:auto"><table id="runsT"><thead><tr><th>#</th><th>Provider</th><th>Model</th><th>Effort</th><th>Stream</th><th>TTFT ms</th><th>Total ms</th><th>Out tok</th><th>Reason tok</th><th>Cached</th><th>tok/s</th><th>Finish</th></tr></thead><tbody></tbody></table></div>
+      <div class="bar"><button id="cRuns">Copy as CSV</button><button id="clrRuns">Clear runs</button></div>
+      <div id="agg" class="note" style="margin-top:8px"></div>
+    </div>
+    <div id="t-avail" class="hide">
+      <div id="asum" class="note" style="margin-bottom:8px">No probe results for this provider yet. Use “Probe shown models” in the Model card.</div>
+      <div style="overflow:auto;max-height:420px"><table id="availT"><thead><tr><th></th><th>Model</th><th>HTTP</th><th>ms</th><th>Detail</th></tr></thead><tbody></tbody></table></div>
+      <div class="bar"><button id="cWork">Copy working model ids</button><button id="clrAvail">Clear results</button></div>
+    </div>
+    <div id="t-fim" class="hide">
+      <p class="note">Uses POST /fim/completions with a prefix and optional suffix. The schema for this endpoint is not in the chat docs, so check the raw response if a field is rejected.</p>
+      <div class="row"><div><label for="fmodel">Model</label><input type="text" id="fmodel" value="mercury-edit-2"></div><div><label for="fmax">max_tokens</label><input type="number" id="fmax" value="128"></div></div>
+      <label for="fpre">prompt (prefix)</label><textarea id="fpre" rows="4">def fib(n):
+    </textarea>
+      <label for="fsuf">suffix</label><textarea id="fsuf" rows="3">
+
+print(fib(10))</textarea>
+      <div class="bar"><button class="p" id="fimGo">Run FIM</button></div>
+      <pre id="fimPre" style="margin-top:8px">Nothing yet.</pre>
+    </div>
+    <div id="t-models" class="hide"><pre id="modPre">Click “Fetch models for this key”.</pre></div>
+  </div>
+</section>
+</main>
+<footer style="max-width:900px;margin:10px auto 30px;padding:0 18px" class="note">
+  <h2 style="font-size:13px;color:var(--ink)">About this playground</h2>
+  <p>LLM API Playground is a free, single-page tool for testing chat-completion APIs from your browser. It has presets for Inception (Mercury), Google AI Studio (Gemini), OpenRouter, Together AI and OpenAI, plus a custom mode that detects the base URL, authentication style and token parameter of any OpenAI-compatible service, including local servers such as Ollama and LM Studio. It can check which models a key can actually use, stream responses, test tool calling and structured output, and measure latency and throughput.</p>
+  <h2 style="font-size:13px;color:var(--ink)">What you can use it for</h2>
+  <ul>
+    <li>Check whether an API key works and list which models it can actually use, with a live availability probe.</li>
+    <li>Compare latency, time to first token and tokens per second across models and providers.</li>
+    <li>Test streaming, tool (function) calling, JSON mode and JSON-schema structured output.</li>
+    <li>Try reasoning-effort settings, sampling parameters and provider-specific flags without writing code.</li>
+    <li>Connect any OpenAI-compatible endpoint, including Groq, Mistral, DeepSeek, xAI, Fireworks, Ollama and LM Studio, by pasting a URL or a cURL command.</li>
+    <li>Copy the exact request as cURL, Python or JavaScript once it works.</li>
+  </ul>
+  <p>There is no backend and no analytics. Requests go directly from your browser to the provider you choose. API keys are kept only in your browser’s storage, optionally encrypted with a passphrase. This project is not affiliated with any of the providers named above.</p>
+</footer>
+<noscript><p style="padding:18px">This tool needs JavaScript to send requests to LLM APIs from your browser.</p></noscript>
+
+<script>
+const $=id=>document.getElementById(id);
+const chatFilterOpenAI=id=>/^(gpt-|o\d|chatgpt-)/.test(id)&&!/(audio|realtime|tts|transcribe|image|search|embedding|instruct|moderation)/.test(id);
+const P={
+ inception:{name:'Inception',base:'https://api.inceptionlabs.ai/v1',model:'mercury-2',tok:'max_completion_tokens',t:[0.5,1],eff:['instant','low','medium','high'],effMode:'flat',env:'INCEPTION_API_KEY',c:'#0f6b5c',d:'#4cc2a8',
+  keyHint:'Create a key at <a href="https://platform.inceptionlabs.ai" target="_blank" rel="noopener">platform.inceptionlabs.ai</a>.',suggest:['mercury-2','mercury-2.5','mercury-3'],
+  list:j=>(j.data||[]).map(x=>({id:x.id,chat:true}))},
+ google:{name:'Google AI Studio',base:'https://generativelanguage.googleapis.com/v1beta/openai',model:'gemini-2.5-flash',tok:'max_tokens',t:[0,2],eff:['none','minimal','low','medium','high'],effMode:'flat',env:'GEMINI_API_KEY',c:'#1a73e8',d:'#7ab0ff',
+  keyHint:'Create a key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. Uses Google’s OpenAI-compatible endpoint.',suggest:['gemini-2.5-flash','gemini-2.5-pro','gemini-2.5-flash-lite'],
+  list:j=>(j.data||[]).map(x=>{const id=String(x.id).replace(/^models\//,'');return{id,ctx:x.inputTokenLimit,chat:/gemini|gemma/.test(id)&&!/embed|imagen|veo|aqa|tts|image|live|audio/.test(id)}})},
+ openrouter:{name:'OpenRouter',base:'https://openrouter.ai/api/v1',model:'openai/gpt-4o-mini',tok:'max_tokens',t:[0,2],eff:['minimal','low','medium','high'],effMode:'reasoning',env:'OPENROUTER_API_KEY',c:'#7c3aed',d:'#b794ff',
+  keyHint:'Create a key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. Add “:free” to the filter to see free models.',suggest:['openai/gpt-4o-mini','anthropic/claude-3.5-haiku','google/gemini-2.5-flash'],
+  list:j=>(j.data||[]).map(x=>{const pr=x.pricing||{};const out=(x.architecture||{}).output_modalities;return{id:x.id,ctx:x.context_length,free:+pr.prompt===0&&+pr.completion===0,chat:!out||out.includes('text')}})},
+ together:{name:'Together AI',base:'https://api.together.xyz/v1',model:'meta-llama/Llama-3.3-70B-Instruct-Turbo',tok:'max_tokens',t:[0,2],eff:['low','medium','high'],effMode:'flat',env:'TOGETHER_API_KEY',c:'#b45309',d:'#ffb15c',
+  keyHint:'Create a key at <a href="https://api.together.ai/settings/api-keys" target="_blank" rel="noopener">api.together.ai</a>.',suggest:['meta-llama/Llama-3.3-70B-Instruct-Turbo','deepseek-ai/DeepSeek-V3','Qwen/Qwen2.5-72B-Instruct-Turbo'],
+  list:j=>(Array.isArray(j)?j:(j.data||[])).map(x=>({id:x.id,ctx:x.context_length,chat:x.type==='chat'||x.type==='language'}))},
+ openai:{name:'OpenAI',base:'https://api.openai.com/v1',model:'gpt-4o-mini',tok:'max_completion_tokens',t:[0,2],eff:['minimal','low','medium','high'],effMode:'flat',env:'OPENAI_API_KEY',c:'#3f3f46',d:'#d4d4d8',
+  keyHint:'Create a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>. Reasoning models reject custom temperature.',suggest:['gpt-4o-mini','gpt-4.1','o4-mini'],
+  list:j=>(j.data||[]).map(x=>({id:x.id,chat:chatFilterOpenAI(x.id)}))},
+ custom:{name:'Custom',base:'',model:'',tok:'max_tokens',t:[0,2],eff:['low','medium','high'],effMode:'flat',env:'API_KEY',c:'#be185d',d:'#f472b6',
+  keyHint:'Use Smart setup above: paste a URL or cURL command and the rest is detected for you.',suggest:[],list:genericList,auth:{t:'bearer'},mpath:'/models'}
+};
+Object.values(P).forEach(p=>p.auth=p.auth||{t:'bearer'});
+function genericList(j){
+  const a=Array.isArray(j)?j:(j.data||j.models||j.result||j.items||[]);
+  return a.map(x=>{if(typeof x==='string')x={id:x};const id=String(x.id||x.name||x.model||'').replace(/^models\//,'');
+    const ty=x.type,out=(x.architecture||{}).output_modalities,pr=x.pricing||{};
+    const chat=!/embed|whisper|tts|moderation|rerank|dall-e|imagen|audio|transcri|image|diffusion|veo|sora/i.test(id)&&(!ty||/chat|language|text|llm|model/i.test(ty))&&(!out||out.includes('text'));
+    return{id,ctx:x.context_length||x.context_window||x.inputTokenLimit||x.max_context_length,free:pr.prompt!==undefined&&+pr.prompt===0&&+pr.completion===0,chat}}).filter(x=>x.id).sort((a,b)=>a.id.localeCompare(b.id));
+}
+let cur='inception',msgs=[],runs=[],ctrl=null,lastReq=null,pctrl=null;
+const draft={},M={};
+let S={bases:{},models:{},custom:{},last:'inception',mode:'persistent',keys:{}},vault=null,vkey=null,locked=false;
+try{const raw=JSON.parse(localStorage.getItem('llmpg')||'{}');const {vault:v0,keys:k0,...rest}=raw;vault=v0||null;S=Object.assign(S,rest,{keys:{}});
+  if(S.mode==='persistent')S.keys=k0||{};
+  else if(S.mode==='session')S.keys=JSON.parse(sessionStorage.getItem('llmpg_keys')||'{}');
+  else if(S.mode==='encrypted')locked=!!vault;
+}catch(e){}
+const enc=new TextEncoder(),dec=new TextDecoder();
+const b2s=b=>btoa(String.fromCharCode(...new Uint8Array(b))),s2b=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function derive(pass,salt){const k=await crypto.subtle.importKey('raw',enc.encode(pass),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:200000,hash:'SHA-256'},k,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+async function newVault(pass){const salt=crypto.getRandomValues(new Uint8Array(16));vkey=await derive(pass,salt);vault={salt:b2s(salt)}}
+async function sealKeys(){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},vkey,enc.encode(JSON.stringify(S.keys)));vault.iv=b2s(iv);vault.ct=b2s(ct)}
+async function unlock(){const pass=prompt('Passphrase for your saved keys');if(!pass)return false;try{const k=await derive(pass,s2b(vault.salt));const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:s2b(vault.iv)},k,s2b(vault.ct));S.keys=JSON.parse(dec.decode(pt));vkey=k;locked=false;return true}catch(e){alert('Wrong passphrase.');return false}}
+async function persist(){
+  try{
+    const out={...S};delete out.keys;
+    if(S.mode==='persistent')out.keys=S.keys;
+    else if(S.mode==='encrypted'){if(vkey){await sealKeys()}if(vault)out.vault=vault}
+    if(S.mode==='session')sessionStorage.setItem('llmpg_keys',JSON.stringify(S.keys));else sessionStorage.removeItem('llmpg_keys');
+    localStorage.setItem('llmpg',JSON.stringify(out));return true;
+  }catch(e){$('kstat').textContent='Browser storage is unavailable here.';return false}
+}
+const mm=()=>M[cur]||(M[cur]={items:[],status:{},order:[]});
+
+// ---------- provider switching ----------
+function renderProvs(){
+  $('provs').innerHTML=Object.entries(P).map(([id,p])=>`<button role="tab" data-p="${id}" class="${id===cur?'on':''}" aria-selected="${id===cur}">${p.name}<i class="dot ${S.keys[id]?'s':''}" title="Key saved"></i></button>`).join('');
+}
+function setAccent(){const dark=matchMedia('(prefers-color-scheme:dark)').matches;document.documentElement.style.setProperty('--acc',dark?P[cur].d:P[cur].c)}
+matchMedia('(prefers-color-scheme:dark)').addEventListener&&matchMedia('(prefers-color-scheme:dark)').addEventListener('change',setAccent);
+function applyProvider(id){
+  if(cur&&$('key'))draft[cur]=$('key').value;
+  cur=id;S.last=id;persist();const p=P[id];
+  document.body.dataset.p=id;setAccent();renderProvs();
+  $('key').value=draft[id]!==undefined?draft[id]:(S.keys[id]||'');keyState();
+  $('keyhint').innerHTML=p.keyHint;
+  $('base').value=S.bases[id]||p.base;try{$('hostnote').textContent=new URL($('base').value).host}catch(e){$('hostnote').textContent=''}
+  $('model').value=S.models[id]||p.model;
+  $('msug').innerHTML=[...new Set([...p.suggest,...mm().items.map(x=>x.id)])].map(i=>`<option value="${i}">`).join('');
+  $('temp').min=p.t[0];$('temp').max=p.t[1];$('temp').placeholder=p.t[0]+'–'+p.t[1]+' (default)';
+  $('toklab').textContent=p.tok;
+  $('efflab').textContent=p.effMode==='reasoning'?'reasoning.effort':'reasoning_effort';
+  $('effort').innerHTML='<option value="">(omit)</option>'+p.eff.map(e=>`<option>${e}</option>`).join('');
+  document.querySelectorAll('[data-only]').forEach(e=>e.classList.toggle('hide',!e.dataset.only.split(' ').includes(id)));
+  if($('t-fim')&&!$('t-fim').classList.contains('hide')&&id!=='inception')openTab('metrics');
+  renderModelSelect();renderAvail();
+  if(id==='custom')syncAdv();
+  updName();
+}
+$('provs').onclick=e=>{const b=e.target.closest('button[data-p]');if(b)applyProvider(b.dataset.p)};
+function keyState(){const k=$('key').value.trim(),s=S.keys[cur];
+  if(locked){$('kstat').textContent='Saved keys are locked. Use “Unlock saved keys”.';return}
+  $('kstat').textContent=!k?(s?'A saved key exists. Field is empty.':'No key saved.'):(!s?'Not saved yet.':(s===k?'Saved in this browser.':'Unsaved change. Save key to overwrite.'));}
+$('key').oninput=()=>{keyState();if(cur==='custom'&&!$('smart').value.trim()&&!$('base').value.trim())sniffKey()};
+$('key').onkeydown=e=>{if(e.key==='Enter')$('saveKey').click()};
+$('saveKey').onclick=async()=>{const k=$('key').value.trim();if(!k)return keyState();if(locked&&!(await unlock()))return;S.keys[cur]=k;if(await persist())keyState();renderProvs();updateUnlockUI()};
+$('forgetKey').onclick=()=>{delete S.keys[cur];persist();keyState();renderProvs()};
+$('forgetAll').onclick=()=>{if(confirm('Remove all 5 saved keys from this browser?')){S.keys={};persist();keyState();renderProvs()}};
+$('base').onchange=()=>{S.bases[cur]=$('base').value.trim();if(cur==='custom'){P.custom.base=S.bases.custom;saveCustom()}persist();try{$('hostnote').textContent=new URL($('base').value).host}catch(e){}};
+$('model').onchange=()=>{S.models[cur]=$('model').value.trim();if(cur==='custom'){P.custom.model=S.models.custom;saveCustom()}persist();renderModelSelect();updName()};
+
+// ---------- tabs ----------
+const TABS=['metrics','req','res','runs','avail','fim','models'];
+function openTab(t){document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));TABS.forEach(x=>$('t-'+x).classList.toggle('hide',x!==t))}
+$('tabs').onclick=e=>{const t=e.target.dataset.t;if(t)openTab(t)};
+$('rf').onchange=()=>$('schemaBox').classList.toggle('hide',$('rf').value!=='json_schema');
+
+// ---------- http helpers ----------
+const base=()=>$('base').value.trim().replace(/\/+$/,'');
+const authOf=()=>P[cur].auth||{t:'bearer'};
+const needKey=()=>!$('key').value.trim()&&!(cur==='custom'&&authOf().t==='none');
+const api=path=>{const a=authOf(),k=$('key').value.trim();let u=base()+path;if(a.t==='query'&&k)u+=(u.includes('?')?'&':'?')+encodeURIComponent(a.name||'key')+'='+encodeURIComponent(k);return u};
+const hdrs=()=>{const h={'Content-Type':'application/json'},k=$('key').value.trim(),a=authOf();if(k){if(a.t==='bearer')h.Authorization='Bearer '+k;else if(a.t==='header')h[a.name||'x-api-key']=k}
+  if(cur==='openrouter'){if($('hreferer').value.trim())h['HTTP-Referer']=$('hreferer').value.trim();if($('htitle').value.trim())h['X-Title']=$('htitle').value.trim()}return h};
+const status=(s,e)=>{$('status').textContent=s;$('status').className=e?'err':''};
+const jparse=(id,label)=>{const v=$(id).value.trim();if(!v)return undefined;try{return JSON.parse(v)}catch(e){throw new Error(label+' is not valid JSON: '+e.message)}};
+const vis=id=>!$(id).closest('.hide');
+const errMsg=t=>{try{let j=JSON.parse(t);if(Array.isArray(j))j=j[0];const e=j.error||j;return (typeof e==='string'?e:e.message||JSON.stringify(e)).slice(0,300)}catch(e){return String(t).slice(0,200)}};
+
+// ---------- model list + probe ----------
+async function fetchModels(){
+  if(needKey()&&cur!=='openrouter')return $('mstat').textContent='Paste a key first.';
+  $('mstat').textContent='Loading…';
+  try{
+    if(P[cur].mpath==='')return $('mstat').textContent='This endpoint has no model list. Type a model id.';
+    const r=await fetch(api(P[cur].mpath||'/models'),{headers:hdrs()});const t=await r.text();
+    if(!r.ok){$('mstat').textContent='HTTP '+r.status+': '+errMsg(t);$('modPre').textContent=t;return}
+    const j=JSON.parse(t);$('modPre').textContent=JSON.stringify(j,null,2).slice(0,200000);
+    const items=P[cur].list(j).sort((a,b)=>a.id.localeCompare(b.id));
+    mm().items=items;
+    $('msug').innerHTML=[...new Set([...P[cur].suggest,...items.map(x=>x.id)])].map(i=>`<option value="${i}">`).join('');
+    $('mstat').textContent=items.length+' models listed ('+items.filter(x=>x.chat).length+' chat-capable)';
+    renderModelSelect();
+  }catch(e){$('mstat').textContent='Failed: '+e.message+' (network or CORS)'}
+}
+$('fetchModels').onclick=fetchModels;
+const SYM={ok:'✓',limited:'⚠',payment:'⚠',no:'✗',bad:'?',err:'✗'};
+const kfmt=n=>n?(n>=1e6?(n/1e6).toFixed(1)+'M':Math.round(n/1000)+'k'):'';
+function shown(){
+  const q=$('mfilter').value.trim().toLowerCase(),m=mm();
+  return m.items.filter(x=>(!$('chatOnly').checked||x.chat)&&(!q||x.id.toLowerCase().includes(q)||(q===':free'||q==='free')&&x.free)&&!($('hideFail').checked&&['no','err','bad'].includes((m.status[x.id]||{}).s)));
+}
+function renderModelSelect(){
+  const m=mm(),list=shown(),sel=$('model').value;
+  $('msel').innerHTML=`<option value="">${m.items.length?`Pick a model (${list.length} of ${m.items.length} shown)`:'Fetch models first'}</option>`+
+    list.map(x=>{const s=m.status[x.id];return `<option value="${x.id}"${x.id===sel?' selected':''}>${s?SYM[s.s]||'?':'·'} ${x.id}${x.ctx?' · '+kfmt(x.ctx):''}${x.free?' · free':''}</option>`}).join('');
+}
+['mfilter','chatOnly','hideFail'].forEach(i=>$(i).addEventListener('input',renderModelSelect));
+$('msel').onchange=()=>{if($('msel').value){$('model').value=$('msel').value;$('model').onchange()}};
+
+function classify(r,t){
+  if(r.ok)return{s:'ok'};
+  const msg=errMsg(t);
+  if(r.status===429)return{s:'limited',msg};
+  if(r.status===402)return{s:'payment',msg};
+  if(r.status===404||r.status===403)return{s:'no',msg};
+  if(r.status===400||r.status===422)return{s:'bad',msg};
+  return{s:'err',msg};
+}
+async function probeOne(id,signal){
+  const t0=performance.now();
+  const body={model:id,messages:[{role:'user',content:'Reply with the single word: ok'}]};body[P[cur].tok]=16;
+  const r=await fetch(api('/chat/completions'),{method:'POST',headers:hdrs(),body:JSON.stringify(body),signal});
+  const t=await r.text();const c=classify(r,t);c.http=r.status;c.ms=performance.now()-t0;return c;
+}
+$('probe').onclick=async()=>{
+  if(needKey())return $('pstat').textContent='Paste a key first.';
+  if(!mm().items.length)await fetchModels();
+  const list=shown().slice(0,Math.max(1,+$('pcap').value||20));
+  if(!list.length)return $('pstat').textContent='No models to probe. Adjust the filter.';
+  const m=mm(),conc=+$('pconc').value;let i=0,done=0,abort=false;pctrl=new AbortController();
+  $('probe').disabled=true;$('pstop').disabled=false;openTab('avail');
+  const worker=async()=>{while(!abort&&i<list.length){const x=list[i++];
+    try{const c=await probeOne(x.id,pctrl.signal);
+      if(c.http===401){abort=true;$('pstat').textContent='HTTP 401: the key was rejected. '+c.msg;pctrl.abort();return}
+      m.status[x.id]=c;if(!m.order.includes(x.id))m.order.push(x.id);
+    }catch(e){if(e.name==='AbortError')return;
+      if(done===0&&e instanceof TypeError){abort=true;$('pstat').textContent='Network or CORS error. This provider may block browser requests from this page; see the note in the chat.';pctrl.abort();return}
+      m.status[x.id]={s:'err',msg:e.message,ms:0};if(!m.order.includes(x.id))m.order.push(x.id)}
+    done++;$('pstat').textContent=`Probed ${done}/${list.length}…`;renderModelSelect();renderAvail()}};
+  await Promise.all(Array.from({length:conc},worker));
+  if(!abort)$('pstat').textContent=`Probe finished: ${done}/${list.length} tested.`;
+  $('probe').disabled=false;$('pstop').disabled=true;renderModelSelect();renderAvail();
+};
+$('pstop').onclick=()=>{pctrl&&pctrl.abort();$('pstat').textContent='Probe stopped.'};
+function renderAvail(){
+  const m=mm(),ids=m.order.filter(id=>m.status[id]);
+  const cls=s=>s==='ok'?'okc':(s==='limited'||s==='payment'?'wr':'err');
+  $('availT').tBodies[0].innerHTML=ids.map(id=>{const s=m.status[id];return `<tr><td class="${cls(s.s)}">${SYM[s.s]||'?'}</td><td>${id}</td><td>${s.http??'–'}</td><td>${s.ms?Math.round(s.ms):'–'}</td><td class="w">${(s.msg||'').replace(/</g,'&lt;')}</td></tr>`}).join('');
+  const c=k=>ids.filter(id=>m.status[id].s===k).length;
+  $('asum').textContent=ids.length?`${P[cur].name}: ${c('ok')} working · ${c('limited')+c('payment')} limited or billing · ${c('no')} unavailable · ${c('bad')+c('err')} errors (of ${ids.length} probed).`:'No probe results for this provider yet. Use “Probe shown models” in the Model card.';
+}
+$('cWork').onclick=e=>{const m=mm();copy(m.order.filter(id=>(m.status[id]||{}).s==='ok').join('\n'),e.target)};
+$('clrAvail').onclick=()=>{M[cur]&&(M[cur].status={},M[cur].order=[]);renderAvail();renderModelSelect()};
+
+// ---------- request building ----------
+function buildBody(history){
+  const p=P[cur],b={model:$('model').value.trim(),messages:[]};
+  if($('sys').value.trim())b.messages.push({role:'system',content:$('sys').value});
+  b.messages.push(...history);
+  const num=(id,k)=>{if(vis(id)&&$(id).value!=='')b[k]=+$(id).value};
+  num('temp','temperature');num('maxc',p.tok);num('topp','top_p');num('seed','seed');num('fpen','frequency_penalty');num('ppen','presence_penalty');num('topk','top_k');num('minp','min_p');num('rep','repetition_penalty');
+  if($('effort').value){p.effMode==='reasoning'?b.reasoning={effort:$('effort').value}:b.reasoning_effort=$('effort').value}
+  const st=$('stop').value.split('\n').filter(Boolean);if(st.length)b.stop=st;
+  if($('stream').checked){b.stream=true;if($('usage').checked)b.stream_options={include_usage:true}}
+  if(vis('diffusing')&&$('diffusing').checked)b.diffusing=true;
+  if(vis('realtime')&&$('realtime').checked)b.realtime=true;
+  if(vis('rsum')&&$('rsum').checked)b.reasoning_summary=true;
+  if(vis('rwait')&&$('rwait').checked)b.reasoning_summary_wait=true;
+  const rf=$('rf').value;
+  if(rf==='json_schema')b.response_format={type:'json_schema',json_schema:jparse('schema','json_schema')};
+  else if(rf)b.response_format={type:rf};
+  if($('useTools').checked){const t=jparse('tools','tools');if(t)b.tools=t;
+    if($('tcname').value.trim())b.tool_choice={type:'function',function:{name:$('tcname').value.trim()}};
+    else if($('tc').value)b.tool_choice=$('tc').value}
+  const ex=jparse('extra','extra_body');if(ex)Object.assign(b,ex);
+  return b;
+}
+
+async function call(body,onDelta,signal){
+  const t0=performance.now();let ttft=null;
+  const res=await fetch(api('/chat/completions'),{method:'POST',headers:hdrs(),body:JSON.stringify(body),signal});
+  const out={status:res.status,headers:{},ttft:null,total:null,content:'',reasoning:'',tool_calls:[],usage:null,finish:null,warning:null,rsum:null,raw:null,events:[]};
+  res.headers.forEach((v,k)=>{if(/ratelimit|retry-after|request-id/i.test(k))out.headers[k]=v});
+  if(!res.ok){const t=await res.text();out.total=performance.now()-t0;out.raw=t;throw Object.assign(new Error(res.status+' '+errMsg(t)),{out})}
+  if(!body.stream){
+    const j=await res.json();out.total=performance.now()-t0;out.raw=j;
+    const c=j.choices&&j.choices[0]||{};const m=c.message||{};
+    out.content=m.content||'';out.reasoning=m.reasoning||m.reasoning_content||'';out.tool_calls=m.tool_calls||[];out.finish=c.finish_reason;out.usage=j.usage;out.warning=j.warning;out.rsum=j.reasoning_summary;
+    return out;
+  }
+  const rd=res.body.getReader(),dec=new TextDecoder();let buf='';const tcs={};
+  while(true){
+    const {value,done}=await rd.read();if(done)break;
+    buf+=dec.decode(value,{stream:true});
+    let i;while((i=buf.indexOf('\n'))>=0){
+      const line=buf.slice(0,i).trim();buf=buf.slice(i+1);
+      if(!line.startsWith('data:'))continue;
+      const d=line.slice(5).trim();if(d==='[DONE]')continue;
+      let j;try{j=JSON.parse(d)}catch(e){continue}
+      if(out.events.length<400)out.events.push(j);
+      if(j.usage)out.usage=j.usage;if(j.warning)out.warning=j.warning;if(j.reasoning_summary)out.rsum=j.reasoning_summary;
+      const c=j.choices&&j.choices[0];if(!c)continue;
+      if(c.finish_reason)out.finish=c.finish_reason;
+      const dl=c.delta||{};
+      const rz=dl.reasoning||dl.reasoning_content;if(rz)out.reasoning+=rz;
+      if(dl.content){if(ttft===null)ttft=performance.now()-t0;
+        out.content=body.diffusing?dl.content:out.content+dl.content;onDelta&&onDelta(out.content)}
+      for(const tc of dl.tool_calls||[]){if(ttft===null)ttft=performance.now()-t0;
+        const k=tc.index||0;const x=tcs[k]||(tcs[k]={id:'',type:'function',function:{name:'',arguments:''}});
+        if(tc.id)x.id=tc.id;if(tc.function&&tc.function.name)x.function.name+=tc.function.name;if(tc.function&&tc.function.arguments)x.function.arguments+=tc.function.arguments}
+    }
+  }
+  out.total=performance.now()-t0;out.ttft=ttft;out.tool_calls=Object.values(tcs);out.raw=out.events;
+  return out;
+}
+
+// ---------- results ----------
+const f=(v,d=0)=>v==null?'–':(+v).toFixed(d);
+function record(body,o){
+  const u=o.usage||{};const ct=u.completion_tokens;const gen=o.ttft!=null?o.total-o.ttft:o.total;
+  const r={n:runs.length+1,prov:P[cur].name,model:body.model,effort:(body.reasoning_effort||(body.reasoning&&body.reasoning.effort))||'default',stream:!!body.stream,ttft:o.ttft,total:o.total,out:ct,rt:u.completion_tokens_details&&u.completion_tokens_details.reasoning_tokens,cached:(u.prompt_tokens_details&&u.prompt_tokens_details.cached_tokens),tps:ct&&gen>0?ct/(gen/1000):null,finish:o.finish};
+  runs.push(r);renderRuns();return r;
+}
+function renderRuns(){
+  $('runsT').tBodies[0].innerHTML=runs.map(r=>`<tr><td>${r.n}</td><td>${r.prov}</td><td>${r.model}</td><td>${r.effort}</td><td>${r.stream?'yes':'no'}</td><td>${f(r.ttft)}</td><td>${f(r.total)}</td><td>${r.out??'–'}</td><td>${r.rt??'–'}</td><td>${r.cached??'–'}</td><td>${f(r.tps,1)}</td><td>${r.finish??'–'}</td></tr>`).join('');
+  const t=runs.map(r=>r.total).sort((a,b)=>a-b);
+  $('agg').textContent=t.length?`${t.length} runs · total ms: min ${f(t[0])}, median ${f(t[Math.floor(t.length/2)])}, p90 ${f(t[Math.min(t.length-1,Math.floor(t.length*.9))])}, max ${f(t[t.length-1])}, mean ${f(t.reduce((a,b)=>a+b,0)/t.length)}`:'';
+}
+function showMetrics(r,o){
+  $('fsmeta').textContent=`${P[cur].name} · ${r.model} · TTFT ${f(r.ttft)} ms · ${f(r.total)} ms total · ${f(r.tps,1)} tok/s · ${r.out??'–'} output tokens`;
+  const kv=[['TTFT ms',f(r.ttft)],['Total ms',f(r.total)],['tok/s',f(r.tps,1)],['Prompt tok',o.usage&&o.usage.prompt_tokens],['Output tok',r.out],['Reasoning tok',r.rt],['Cached tok',r.cached],['Finish',r.finish],['HTTP',o.status]];
+  $('kv').innerHTML=kv.map(([k,v])=>`<div><small>${k}</small><strong>${v??'–'}</strong></div>`).join('');
+  $('warn').textContent=(o.warning?'Warning from API: '+o.warning+'. ':'')+Object.entries(o.headers).map(([k,v])=>k+': '+v).join(' · ');
+  $('rs').textContent=(o.rsum?'Reasoning summary ('+(o.rsum.status||'?')+'): '+(o.rsum.content||'')+'\n':'')+(o.reasoning?'Reasoning text: '+o.reasoning.slice(0,3000):'');
+}
+function showRaw(body,o){
+  lastReq=body;$('reqPre').textContent=JSON.stringify(body,null,2);
+  $('resPre').textContent=typeof o.raw==='string'?o.raw:JSON.stringify(o.raw,null,2);
+}
+
+// ---------- chat ----------
+function renderChat(){
+  const c=$('chat');c.innerHTML='';
+  msgs.forEach(m=>{
+    const d=document.createElement('div');d.className='m '+m.role;
+    const b=document.createElement('b');b.textContent=m.role+(m.tool_call_id?' ('+m.tool_call_id+')':'');d.append(b);
+    const bd=document.createElement('div');fillBody(bd,m);d.append(bd);
+    (m.tool_calls||[]).forEach(t=>{const p=document.createElement('div');p.className='note';p.textContent='tool call → '+t.function.name+'('+t.function.arguments+')  id '+t.id;d.append(p)});
+    c.append(d);
+  });
+  const last=msgs[msgs.length-1];
+  if(last&&last.role==='assistant'&&last.tool_calls&&last.tool_calls.length){
+    const box=document.createElement('div');box.className='m';box.innerHTML='<b>provide tool results</b>';
+    last.tool_calls.forEach(t=>{const i=document.createElement('input');i.type='text';i.dataset.id=t.id;i.placeholder='Result for '+t.function.name+' (any text or JSON)';i.style.marginBottom='6px';box.append(i)});
+    const bt=document.createElement('button');bt.className='p';bt.textContent='Send tool results';
+    bt.onclick=()=>{box.querySelectorAll('input').forEach(i=>msgs.push({role:'tool',tool_call_id:i.dataset.id,content:i.value||'{}'}));renderChat();go()};
+    box.append(bt);c.append(box);
+  }
+  c.scrollTop=c.scrollHeight;
+}
+async function go(){
+  let body;try{body=buildBody(msgs)}catch(e){return status(e.message,1)}
+  if(needKey())return status('Paste your API key first.',1);
+  ctrl=new AbortController();$('send').disabled=true;$('stop-btn').disabled=false;status('Waiting for response…');
+  const live=document.createElement('div');live.className='m assistant';live.innerHTML='<b>assistant</b>';
+  const lb=document.createElement('div');live.append(lb);$('chat').append(live);let pend='',pf=0;
+  const paint=t=>{pend=t;if(!pf)pf=requestAnimationFrame(()=>{pf=0;fillBody(lb,{role:'assistant',content:pend});$('chat').scrollTop=1e9})};
+  try{
+    const o=await call(body,paint,ctrl.signal);
+    const m={role:'assistant',content:o.content||null};if(o.tool_calls.length)m.tool_calls=o.tool_calls;
+    msgs.push(m);const r=record(body,o);showMetrics(r,o);showRaw(body,o);status('Done');
+  }catch(e){
+    if(e.name==='AbortError')status('Stopped');
+    else{status(e.message+(e.out?'':' (network or CORS error; see the browser console)'),1);if(e.out)showRaw(body,e.out);else{lastReq=body;$('reqPre').textContent=JSON.stringify(body,null,2)}}
+  }
+  $('send').disabled=false;$('stop-btn').disabled=true;renderChat();
+}
+$('send').onclick=()=>{const v=$('user').value.trim();if(v){msgs.push({role:'user',content:v});$('user').value=''}else if(!msgs.length)return;renderChat();go()};
+$('user').onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')$('send').click()};
+$('stop-btn').onclick=()=>ctrl&&ctrl.abort();
+$('clear').onclick=()=>{msgs=[];renderChat();status('')};
+$('bench').onclick=async()=>{
+  const v=$('user').value.trim()||(msgs.slice().reverse().find(m=>m.role==='user')||{}).content;
+  if(!v)return status('Type a message to benchmark.',1);
+  if(needKey())return status('Paste your API key first.',1);
+  const n=Math.max(1,Math.min(50,+$('n').value||1));$('bench').disabled=true;
+  try{for(let i=1;i<=n;i++){status(`Benchmark ${i}/${n}…`);
+    const body=buildBody([{role:'user',content:v}]);const o=await call(body);const r=record(body,o);showMetrics(r,o);showRaw(body,o)}
+    status('Benchmark done. See the Runs tab.')}
+  catch(e){status(e.message,1)}
+  $('bench').disabled=false;
+};
+
+// ---------- FIM (Inception) ----------
+$('fimGo').onclick=async()=>{
+  const b={model:$('fmodel').value.trim(),prompt:$('fpre').value,suffix:$('fsuf').value,max_tokens:+$('fmax').value||128};
+  if($('temp').value!=='')b.temperature=+$('temp').value;
+  $('fimPre').textContent='Running…';const t0=performance.now();
+  try{const r=await fetch(api('/fim/completions'),{method:'POST',headers:hdrs(),body:JSON.stringify(b)});const j=await r.json();
+    $('fimPre').textContent=`HTTP ${r.status} · ${f(performance.now()-t0)} ms\n\n`+JSON.stringify(j,null,2)}
+  catch(e){$('fimPre').textContent='Failed: '+e.message}
+};
+
+// ---------- copy helpers ----------
+const copy=(t,btn)=>navigator.clipboard.writeText(t).then(()=>{const o=btn.textContent;btn.textContent='Copied';setTimeout(()=>btn.textContent=o,1200)});
+const need=()=>lastReq||buildBody(msgs.length?msgs:[{role:'user',content:$('user').value||'Hello'}]);
+const extraH=()=>Object.entries(hdrs()).filter(([k])=>k==='HTTP-Referer'||k==='X-Title');
+$('cCurl').onclick=e=>copy(`curl ${base()}/chat/completions \\\n  -H "Content-Type: application/json" \\\n${authLine()}${extraH().map(([k,v])=>`  -H "${k}: ${v}" \\\n`).join('')}  -d '${JSON.stringify(need()).replace(/'/g,"'\\''")}'`,e.target);
+$('cPy').onclick=e=>{const q=need();const py=JSON.stringify(q,null,4).replace(/: true\b/g,': True').replace(/: false\b/g,': False').replace(/: null\b/g,': None');
+  copy(`import os, requests\n\nr = requests.post(\n    "${base()}/chat/completions",\n    headers=${pyAuth()},\n    json=${py},\n    stream=${q.stream?'True':'False'},\n)\nprint(r.text)`,e.target)};
+$('cJs').onclick=e=>copy(`const res = await fetch("${base()}/chat/completions", {\n  method: "POST",\n  headers: {"Content-Type": "application/json", ${jsAuth()}},\n  body: JSON.stringify(${JSON.stringify(need(),null,2)})\n});\nconsole.log(await res.text());`,e.target);
+$('cRuns').onclick=e=>copy(['n,provider,model,effort,stream,ttft_ms,total_ms,out_tok,reason_tok,cached,tok_s,finish'].concat(runs.map(r=>[r.n,r.prov,r.model,r.effort,r.stream,f(r.ttft),f(r.total),r.out??'',r.rt??'',r.cached??'',f(r.tps,1),r.finish??''].join(','))).join('\n'),e.target);
+$('clrRuns').onclick=()=>{runs=[];renderRuns()};
+
+
+// ---------- snippet auth helpers ----------
+const authLine=()=>{const a=authOf(),v='$'+P[cur].env;return a.t==='bearer'?`  -H "Authorization: Bearer ${v}" \\\n`:a.t==='header'?`  -H "${a.name}: ${v}" \\\n`:''};
+const pyAuth=()=>{const a=authOf(),e=`os.environ["${P[cur].env}"]`;return a.t==='header'?`{"${a.name}": ${e}}`:a.t==='none'?'{}':`{"Authorization": "Bearer " + ${e}}`};
+const jsAuth=()=>{const a=authOf(),e=`process.env.${P[cur].env}`;return a.t==='header'?`"${a.name}": ${e}`:`"Authorization": "Bearer " + ${e}`};
+
+// ---------- markdown (escape first, then add tags) ----------
+function md(s){
+  s=String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const blocks=[];
+  s=s.replace(/```(\w*)\n?([\s\S]*?)(```|$)/g,(m,l,c)=>{blocks.push('<pre><code>'+c.replace(/\n$/,'')+'</code></pre>');return '\u0000'+(blocks.length-1)+'\u0000'});
+  s=s.replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*([^*\n\s][^*\n]*)\*/g,'$1<em>$2</em>');
+  s=s.replace(/^#{1,6}\s+(.*)$/gm,'<h3>$1</h3>');
+  s=s.replace(/(^|\n)((?:[ \t]*[-*][ \t]+.*(?:\n|$))+)/g,(m,a,l)=>a+'<ul>'+l.trim().split('\n').map(x=>'<li>'+x.replace(/^[ \t]*[-*][ \t]+/,'')+'</li>').join('')+'</ul>\n');
+  s=s.replace(/(^|\n)((?:[ \t]*\d+\.[ \t]+.*(?:\n|$))+)/g,(m,a,l)=>a+'<ol>'+l.trim().split('\n').map(x=>'<li>'+x.replace(/^[ \t]*\d+\.[ \t]+/,'')+'</li>').join('')+'</ol>\n');
+  s=s.split(/\n{2,}/).map(p=>/^\s*(<(h3|ul|ol|pre)|\u0000)/.test(p)?p:'<p>'+p.replace(/\n/g,'<br>')+'</p>').join('');
+  return s.replace(/\u0000(\d+)\u0000/g,(m,i)=>blocks[+i]);
+}
+function fillBody(el,m){
+  if(m.role==='assistant'&&$('mdon').checked){el.className='md';el.innerHTML=md(m.content||'')}
+  else{el.className='';el.style.whiteSpace='pre-wrap';el.textContent=m.content||''}
+}
+$('mdon').onchange=renderChat;
+
+// ---------- full screen + text size ----------
+let cfs=14;
+const setSize=d=>{cfs=Math.max(11,Math.min(24,cfs+d));document.documentElement.style.setProperty('--cfs',cfs+'px')};
+$('fsm').onclick=()=>setSize(-1);$('fsp').onclick=()=>setSize(1);
+function setFS(on){const c=$('convo');c.classList.toggle('fs',on);document.body.classList.toggle('noscroll',on);$('fsBtn').textContent=on?'Exit full screen':'Full screen';
+  if(on&&c.requestFullscreen&&!document.fullscreenElement)c.requestFullscreen().catch(()=>{});
+  if(!on&&document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+  if(on)setSize(1);else setSize(-1);
+  $('chat').scrollTop=1e9}
+$('fsBtn').onclick=()=>setFS(!$('convo').classList.contains('fs'));
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&$('convo').classList.contains('fs'))setFS(false)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('convo').classList.contains('fs'))setFS(false)});
+function updName(){$('fsname').textContent='· '+P[cur].name+' · '+($('model').value||'no model selected')}
+$('msel').addEventListener('change',updName);
+
+// ---------- key storage mode ----------
+function updateUnlockUI(){$('unlock').classList.toggle('hide',!locked);$('smode').value=S.mode}
+$('unlock').onclick=async()=>{if(await unlock()){$('key').value=S.keys[cur]||'';keyState();renderProvs();updateUnlockUI()}};
+$('smode').onchange=async()=>{
+  const m=$('smode').value,back=()=>{$('smode').value=S.mode};
+  if(locked&&!(await unlock()))return back();
+  if(m==='encrypted'&&!vkey){const pw=prompt('Choose a passphrase. You will need it on every visit and it cannot be recovered.');if(!pw)return back();await newVault(pw)}
+  S.mode=m;if(m!=='encrypted'){vault=null;vkey=null}
+  await persist();keyState();updateUnlockUI();renderProvs()};
+
+// ---------- custom provider: smart detection ----------
+const KNOWN=[ // label, base URL, key prefix, default model (for hosts without a model list)
+ ['Groq','https://api.groq.com/openai/v1',/^gsk_/],
+ ['Mistral','https://api.mistral.ai/v1'],
+ ['DeepSeek','https://api.deepseek.com/v1'],
+ ['xAI (Grok)','https://api.x.ai/v1',/^xai-/],
+ ['Fireworks','https://api.fireworks.ai/inference/v1',/^fw_/],
+ ['Cerebras','https://api.cerebras.ai/v1',/^csk-/],
+ ['SambaNova','https://api.sambanova.ai/v1'],
+ ['DeepInfra','https://api.deepinfra.com/v1/openai'],
+ ['Hyperbolic','https://api.hyperbolic.xyz/v1'],
+ ['NVIDIA NIM','https://integrate.api.nvidia.com/v1',/^nvapi-/],
+ ['Perplexity','https://api.perplexity.ai',/^pplx-/,'sonar'],
+ ['Moonshot (Kimi)','https://api.moonshot.ai/v1'],
+ ['Anthropic (OpenAI-compatible)','https://api.anthropic.com/v1',/^sk-ant-/],
+ ['Cohere (OpenAI-compatible)','https://api.cohere.ai/compatibility/v1'],
+ ['Ollama (local)','http://localhost:11434/v1'],
+ ['LM Studio (local)','http://localhost:1234/v1'],
+ ['vLLM / llama.cpp (local)','http://localhost:8000/v1']
+];
+$('preset').innerHTML='<option value="">Pick a known endpoint…</option>'+KNOWN.map((k,i)=>`<option value="${i}">${k[0]}</option>`).join('');
+$('preset').onchange=()=>{const k=KNOWN[$('preset').value];if(k){$('smart').value=k[1];$('dstat').textContent=/localhost/.test(k[1])?'Local server: no key needed. Press Detect.':'Paste your key, then press Detect.'}};
+function sniffKey(){const k=$('key').value.trim();if(k.length<12)return;
+  const bi=[[/^sk-or-/,'openrouter'],[/^AIza/,'google'],[/^tgp_v1_/,'together']].find(x=>x[0].test(k));
+  if(bi){$('dstat').textContent='This looks like a '+P[bi[1]].name+' key. Press Detect to switch to its tab.';return}
+  const kn=KNOWN.find(x=>x[2]&&x[2].test(k));
+  if(kn){$('smart').value=kn[1];$('dstat').textContent='Looks like a '+kn[0]+' key. Base URL filled in. Press Detect to verify.'}}
+function parseSmart(t){
+  const o={};
+  if(/^\s*curl\b/i.test(t)){
+    const u=t.match(/https?:\/\/[^\s'"\\]+/);if(u)o.url=u[0];
+    for(const m of t.matchAll(/(?:-H|--header)\s+(['"])(.*?)\1/g)){const x=m[2],i=x.indexOf(':');if(i<1)continue;
+      const n=x.slice(0,i).trim().toLowerCase(),v=x.slice(i+1).trim();
+      if(v.startsWith('$')||/<.*>|YOUR|\$\{/i.test(v))continue;
+      if(n==='authorization'&&/^bearer\s+/i.test(v))o.key=v.replace(/^bearer\s+/i,'');
+      else if(n==='x-api-key'||n==='api-key'){o.key=v;o.auth={t:'header',name:n}}}
+    const b=t.match(/(?:-d|--data(?:-raw|-binary)?)\s+'([\s\S]*?)'(?:\s|$)/)||t.match(/(?:-d|--data(?:-raw|-binary)?)\s+"([\s\S]*?)"(?:\s|$)/);
+    if(b){try{const j=JSON.parse(b[1].replace(/\\"/g,'"'));if(j.model)o.model=j.model;o.tok='max_completion_tokens' in j?'max_completion_tokens':('max_tokens' in j?'max_tokens':undefined)}catch(e){}}
+  }else{const m=t.match(/https?:\/\/[^\s'"]+|(?:localhost|127\.0\.0\.1|[\w-]+(?:\.[\w-]+)+)(?::\d+)?(?:\/[^\s'"]*)?/i);if(m)o.url=m[0]}
+  return o}
+function candidates(u){
+  if(!/^https?:\/\//i.test(u))u=(/^(localhost|127\.|192\.168\.|10\.)/.test(u)?'http://':'https://')+u;
+  let x;try{x=new URL(u)}catch(e){return[]}
+  const p=x.pathname.replace(/\/+$/,'').replace(/\/(chat\/completions|completions|models|embeddings|responses)$/,'');
+  const set=[],add=v=>{v=v.replace(/\/+$/,'');if(!set.includes(v))set.push(v)};
+  add(x.origin+p);if(!/\/v\d/.test(p)){add(x.origin+p+'/v1');add(x.origin+p+'/openai/v1');add(x.origin+p+'/api/v1')}
+  return set}
+const AUTHS=[{t:'bearer'},{t:'header',name:'x-api-key'},{t:'header',name:'api-key'},{t:'query',name:'key'}];
+const alabel=a=>a.t==='bearer'?'Bearer token':a.t==='header'?a.name+' header':a.t==='query'?'?'+a.name+'= query':'no auth';
+const mkH=(a,k)=>{const h={};if(k){if(a.t==='bearer')h.Authorization='Bearer '+k;else if(a.t==='header')h[a.name]=k}return h};
+const mkU=(b,path,a,k)=>b+path+(a.t==='query'&&k?'?'+a.name+'='+encodeURIComponent(k):'');
+async function tryGet(b,a,k){try{const r=await fetch(mkU(b,'/models',a,k),{headers:mkH(a,k)});const t=await r.text();let j=null;try{j=JSON.parse(t)}catch(e){}return{status:r.status,json:j}}catch(e){return{status:0}}}
+async function tryChat(b,a,k,model,tok){try{const body={model,messages:[{role:'user',content:'Reply with: ok'}]};body[tok]=16;
+  const r=await fetch(mkU(b,'/chat/completions',a,k),{method:'POST',headers:{...mkH(a,k),'Content-Type':'application/json'},body:JSON.stringify(body)});const t=await r.text();return{status:r.status,msg:errMsg(t)}}catch(e){return{status:0,msg:e.message}}}
+function loadCustom(){const c=S.custom||{};Object.assign(P.custom,{name:c.name||'Custom',base:c.base||'',auth:c.auth||{t:'bearer'},tok:c.tok||'max_tokens',mpath:c.mpath??'/models',model:c.model||''})}
+function saveCustom(){const p=P.custom;S.custom={base:$('base').value.trim()||p.base,auth:p.auth,tok:p.tok,mpath:p.mpath,name:p.name,model:$('model').value.trim()};persist()}
+function syncAdv(){const p=P.custom,a=p.auth;$('auth').value=a.t;$('authname').value=a.name||'';$('tokp').value=p.tok;$('mpath').value=p.mpath??'/models';$('cname').value=p.name==='Custom'?'':p.name}
+['auth','authname','tokp','mpath','cname'].forEach(i=>$(i).onchange=()=>{const p=P.custom,t=$('auth').value;
+  p.auth={t,name:t==='header'?($('authname').value||'x-api-key'):t==='query'?($('authname').value||'key'):undefined};
+  p.tok=$('tokp').value;p.mpath=$('mpath').value;p.name=$('cname').value.trim()||'Custom';saveCustom();$('toklab').textContent=p.tok;renderProvs();updName()});
+async function detect(){
+  const logEl=$('detLog'),log=[],L=x=>{log.push(x);logEl.textContent=log.join('\n');logEl.classList.remove('hide')};
+  $('detect').disabled=true;$('dstat').textContent='Working…';
+  try{
+    const raw=$('smart').value.trim()||$('base').value.trim();let key=$('key').value.trim();
+    const info=raw?parseSmart(raw):{};
+    if(info.key&&!key){key=info.key;$('key').value=key;keyState();L('Took the API key from your cURL command.')}
+    let url=info.url;
+    if(!url&&key){
+      const bi=[[/^sk-or-/,'openrouter'],[/^AIza/,'google'],[/^tgp_v1_/,'together']].find(x=>x[0].test(key));
+      if(bi){L('Key format matches '+P[bi[1]].name+'. Switching to its tab.');draft[bi[1]]=key;applyProvider(bi[1]);return}
+      const kn=KNOWN.find(x=>x[2]&&x[2].test(key));if(kn){url=kn[1];L('Key prefix looks like '+kn[0]+'. Trying '+url)}}
+    if(!url){L('Nothing to go on. Paste a URL, a cURL command, or a key with a recognisable prefix.');$('dstat').textContent='Need more input';return}
+    const cands=candidates(url);if(!cands.length){L('Could not read that as a URL.');return}
+    const host=new URL(cands[0]).host,bi=Object.keys(P).find(id=>id!=='custom'&&new URL(P[id].base).host===host);
+    if(bi){L(P[bi].name+' has its own tab with a tuned UI. Switching.');draft[bi]=key||draft[bi]||'';applyProvider(bi);return}
+    let styles=key?AUTHS.slice():[{t:'none'}];
+    if(info.auth)styles=[info.auth,...styles.filter(a=>!(a.t===info.auth.t&&a.name===info.auth.name))];
+    let hit=null;
+    outer:for(const b of cands){for(const a of styles){
+      const r=await tryGet(b,a,key);L(`GET ${b}/models (${alabel(a)}) → ${r.status||'network or CORS error'}`);
+      if(r.status===200&&r.json){const items=genericList(r.json);if(items.length){hit={b,a,items};break outer}L('  200, but no model list in the response')}
+      if(r.status===0||r.status===404)break;
+    }}
+    const kn2=KNOWN.find(x=>cands.includes(x[1]));const model0=info.model||(kn2&&kn2[3]);
+    if(!hit&&model0){for(const b of cands){for(const a of styles){
+      const r=await tryChat(b,a,key,model0,'max_tokens');L(`POST ${b}/chat/completions model=${model0} → ${r.status||'network or CORS error'}`);
+      if([200,402,429].includes(r.status)){hit={b,a,items:[],noList:true};break}
+      if(r.status===0||r.status===404)break}if(hit)break}}
+    if(!hit){L('No working combination found. '+(key?'Check the key and URL. The server may also block browser requests (CORS).':'This server may need a key: paste it and press Detect again.'));$('dstat').textContent='Could not auto-detect';return}
+    let tok=info.tok||'max_tokens';const items=hit.items,model=info.model||(((items.find(x=>x.chat)||items[0])||{}).id)||model0||'';
+    if(model&&!hit.noList){
+      let r=await tryChat(hit.b,hit.a,key,model,tok);L(`POST chat/completions model=${model} (${tok}) → ${r.status||'error'}`);
+      if(r.status===400&&/max_completion_tokens/.test(r.msg)&&tok==='max_tokens'){tok='max_completion_tokens';r=await tryChat(hit.b,hit.a,key,model,tok);L(`  retry with ${tok} → ${r.status}`)}
+      if(r.status>=400&&![402,429].includes(r.status))L('  note: '+r.msg)}
+    const p=P.custom;
+    p.base=hit.b;p.auth=hit.a;p.tok=tok;p.mpath=hit.noList?'':'/models';p.name=kn2?kn2[0]:new URL(hit.b).hostname.replace(/^(api|www)\./,'');if(model)p.model=model;
+    $('base').value=hit.b;S.bases.custom=hit.b;if(model){$('model').value=model;S.models.custom=model}
+    M.custom={items,status:{},order:[]};
+    $('msug').innerHTML=items.map(x=>`<option value="${x.id}">`).join('');
+    syncAdv();saveCustom();renderProvs();renderModelSelect();updName();$('toklab').textContent=tok;
+    try{$('hostnote').textContent=new URL(hit.b).host}catch(e){}
+    L(`Configured: ${p.name} · ${alabel(hit.a)} · ${tok} · ${hit.noList?'no model list':items.length+' models'}`);
+    $('dstat').textContent='Configured: '+p.name+(hit.noList?'':' ('+items.length+' models)');
+  }catch(e){L('Error: '+e.message)}
+  finally{$('detect').disabled=false}
+}
+$('detect').onclick=detect;
+$('smart').addEventListener('paste',()=>setTimeout(()=>{if($('key').value.trim()||/^\s*curl\b/i.test($('smart').value)||/localhost|127\.0\.0\.1/.test($('smart').value))detect();else $('dstat').textContent='Now paste your key. Detection will run automatically.'},60));
+$('key').addEventListener('paste',()=>{if(cur==='custom'&&$('smart').value.trim())setTimeout(detect,80)});
+
+// ---------- init ----------
+loadCustom();
+cur='';applyProvider(P[S.last]?S.last:'inception');updateUnlockUI();renderChat();
+</script>
+</body>
+</html>
